@@ -77,12 +77,15 @@ enum AXShortcutReader {
 
     private static func modifiers(for element: AXUIElement) -> Set<Shortcut.Modifier> {
         let raw: NSNumber? = value(element, attribute: kAXMenuItemCmdModifiersAttribute as String)
-        let flags = raw?.uint32Value ?? 0
+        return modifiers(rawValue: raw?.uint32Value ?? 0)
+    }
+
+    static func modifiers(rawValue flags: UInt32) -> Set<Shortcut.Modifier> {
         var result: Set<Shortcut.Modifier> = []
-        if flags & (1 << 0) == 0 { result.insert(.command) }
-        if flags & (1 << 1) != 0 { result.insert(.shift) }
-        if flags & (1 << 2) != 0 { result.insert(.option) }
-        if flags & (1 << 3) != 0 { result.insert(.control) }
+        if flags & (1 << 3) == 0 { result.insert(.command) }
+        if flags & (1 << 0) != 0 { result.insert(.shift) }
+        if flags & (1 << 1) != 0 { result.insert(.option) }
+        if flags & (1 << 2) != 0 { result.insert(.control) }
         return result
     }
 

@@ -3,13 +3,21 @@ import SwiftUI
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let overlayDesignSize = NSSize(width: 1580, height: 680)
+    private let overlayContentSize = NSSize(width: 1580, height: 680)
+    private let overlayShadowInset: CGFloat = 36
+    private var overlayDesignSize: NSSize {
+        NSSize(
+            width: overlayContentSize.width + overlayShadowInset * 2,
+            height: overlayContentSize.height + overlayShadowInset * 2
+        )
+    }
     let model = ShortcutModel()
 
     private var overlayPanel: NSPanel?
     private var holdHotKey: HoldHotKey?
     private var started = false
     private var overlayShownAt: ContinuousClock.Instant?
+    private var pendingHideTask: Task<Void, Never>?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         start()
@@ -29,6 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        pendingHideTask?.cancel()
         holdHotKey?.unregister()
     }
 
@@ -43,7 +52,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = true
+        // The system shadow follows the rectangular NSPanel, not the rounded
+        // SwiftUI surface. Draw the shadow inside a transparent inset instead.
+        panel.hasShadow = false
         panel.hidesOnDeactivate = false
         panel.isMovableByWindowBackground = false
         updateOverlayContent(scale: 1, panel: panel)
@@ -52,15 +63,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func installHoldShortcut() {
         let hotKey = HoldHotKey(
-            onPressed: { [weak self] in self?.showOverlay() },
-            onReleased: { [weak self] in self?.hideOverlay() }
+            onPressed: { [weak self] in self?.hotKeyPressed() },
+            onReleased: { [weak self] in self?.hotKeyReleased() }
         )
         holdHotKey = hotKey
         _ = hotKey.register()
     }
 
+    private func hotKeyPressed() {
+        switch OverlayActivationMode.current {
+        case .hold:
+            showOverlay()
+        case .toggle:
+            if overlayPanel?.isVisible == true {
+                hideOverlay(immediately: true)
+            } else {
+                showOverlay()
+            }
+        }
+    }
+
+    private func hotKeyReleased() {
+        guard OverlayActivationMode.current == .hold else { return }
+        hideOverlay()
+    }
+
     private func showOverlay() {
-        if model.trusted { model.refresh() }
+        pendingHideTask?.cancel()
+        pendingHideTask = nil
+        if model.trusted { model.refreshCurrentContext() }
         guard let panel = overlayPanel else { return }
         let screen = NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) }) ?? NSScreen.main
         if let visibleFrame = screen?.visibleFrame {
@@ -84,12 +115,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func updateOverlayContent(scale: CGFloat, panel: NSPanel) {
         let scaledSize = NSSize(width: overlayDesignSize.width * scale, height: overlayDesignSize.height * scale)
         let root = ShortcutOverlayView(model: model)
+            .padding(overlayShadowInset)
             .scaleEffect(scale, anchor: .topLeading)
             .frame(width: scaledSize.width, height: scaledSize.height, alignment: .topLeading)
         panel.contentViewController = NSHostingController(rootView: root)
     }
 
-    private func hideOverlay() {
+    private func hideOverlay(immediately: Bool = false) {
+        pendingHideTask?.cancel()
+        pendingHideTask = nil
+        if immediately {
+            overlayPanel?.orderOut(nil)
+            overlayShownAt = nil
+            return
+        }
         guard let shownAt = overlayShownAt else {
             overlayPanel?.orderOut(nil)
             return
@@ -99,12 +138,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ? Duration.seconds(3)
             : Duration.milliseconds(180)
         if elapsed < minimum {
-            Task { @MainActor [weak self] in
+            pendingHideTask = Task { @MainActor [weak self] in
                 try? await Task.sleep(for: minimum - elapsed)
+                guard !Task.isCancelled else { return }
                 self?.overlayPanel?.orderOut(nil)
+                self?.overlayShownAt = nil
+                self?.pendingHideTask = nil
             }
         } else {
             overlayPanel?.orderOut(nil)
+            overlayShownAt = nil
         }
     }
 }

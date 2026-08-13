@@ -20,7 +20,7 @@ struct ShortcutOverlayView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(model.appName) 快捷键地图")
                         .font(.title2.weight(.bold))
-                    Text("按住 ⌃⌥Space 查看 · 松开即隐藏")
+                    Text(OverlayActivationMode.current.detail)
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -58,7 +58,7 @@ struct ShortcutOverlayView: View {
                     lineWidth: 1
                 )
         }
-        .shadow(color: .black.opacity(0.28), radius: 35, y: 16)
+        .shadow(color: .black.opacity(0.26), radius: 28, y: 12)
     }
 }
 

@@ -35,35 +35,75 @@ struct ContentView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
-            Picker("App", selection: $model.selectedAppPID) {
-                Label("跟随当前 App", systemImage: "scope")
-                    .tag(Optional<pid_t>.none)
-                Divider()
-                ForEach(model.availableApps) { app in
-                    HStack {
-                        if let icon = app.icon {
-                            Image(nsImage: icon)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 18, height: 18)
-                        }
-                        Text(app.name)
-                    }
-                    .tag(Optional(app.id))
-                }
-            }
-            .labelsHidden()
+            appPicker
             .frame(width: 190)
             .help("选择要查看快捷键的 App")
             TextField("搜索功能或组合键", text: $model.query)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 240)
-            Button { model.refresh() } label: {
+            Button { model.refreshCurrentContext() } label: {
                 Label("重新扫描", systemImage: "arrow.clockwise")
             }
         }
         .padding(.horizontal, 22)
         .padding(.vertical, 14)
+    }
+
+    private var appPicker: some View {
+        Menu {
+            Button {
+                model.selectedAppPID = nil
+            } label: {
+                Label("跟随当前 App", systemImage: model.selectedAppPID == nil ? "checkmark" : "scope")
+            }
+
+            Divider()
+
+            ForEach(model.availableApps) { app in
+                Button {
+                    model.selectedAppPID = app.id
+                } label: {
+                    HStack {
+                        if model.selectedAppPID == app.id {
+                            Image(systemName: "checkmark")
+                        } else if let icon = app.icon {
+                            Image(nsImage: icon)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 16, height: 16)
+                        }
+                        Text(app.name)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 7) {
+                if let app = selectedAppOption, let icon = app.icon {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 18, height: 18)
+                } else {
+                    Image(systemName: "scope")
+                        .frame(width: 18, height: 18)
+                }
+                Text(selectedAppOption?.name ?? "跟随当前 App")
+                    .lineLimit(1)
+                Spacer(minLength: 2)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 9)
+            .frame(height: 30)
+            .contentShape(Rectangle())
+        }
+        .menuStyle(.borderlessButton)
+    }
+
+    private var selectedAppOption: ShortcutModel.AppOption? {
+        guard let selectedAppPID = model.selectedAppPID else { return nil }
+        return model.availableApps.first { $0.id == selectedAppPID }
     }
 
     private var mainContent: some View {

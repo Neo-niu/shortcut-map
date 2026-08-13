@@ -68,4 +68,19 @@ struct ShortcutTests {
         )
         #expect(shortcut.combination == "⇧")
     }
+
+    @Test func overlayActivationModesHaveStableStoredValues() {
+        #expect(OverlayActivationMode.hold.rawValue == "hold")
+        #expect(OverlayActivationMode.toggle.rawValue == "toggle")
+        #expect(OverlayActivationMode.allCases.count == 2)
+    }
+
+    @Test func accessibilityMenuModifierMaskUsesMacOSBitLayout() {
+        #expect(AXShortcutReader.modifiers(rawValue: 0) == [.command])
+        #expect(AXShortcutReader.modifiers(rawValue: 1 << 0) == [.shift, .command])
+        #expect(AXShortcutReader.modifiers(rawValue: 1 << 1) == [.option, .command])
+        #expect(AXShortcutReader.modifiers(rawValue: 1 << 2) == [.control, .command])
+        #expect(AXShortcutReader.modifiers(rawValue: 1 << 3).isEmpty)
+        #expect(AXShortcutReader.modifiers(rawValue: 0b1111) == [.shift, .option, .control])
+    }
 }

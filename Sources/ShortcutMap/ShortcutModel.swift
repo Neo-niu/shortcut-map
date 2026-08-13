@@ -114,6 +114,46 @@ final class ShortcutModel: ObservableObject {
         issue = shortcuts.isEmpty ? result.issue : nil
     }
 
+    /// Re-resolve the frontmost app when operating in follow mode.
+    /// Activation notifications are best-effort and can be missed while the
+    /// app is hidden or an overlay is being presented.
+    func refreshCurrentContext() {
+        if selectedAppPID == nil,
+           let front = focusedOrFrontmostApplication(),
+           front.bundleIdentifier != Bundle.main.bundleIdentifier,
+           front.activationPolicy == .regular {
+            targetApplication = front
+            targetBundleIdentifier = front.bundleIdentifier
+            appName = front.localizedName ?? "未知 App"
+            appIcon = front.icon
+        }
+        refresh()
+    }
+
+    /// The workspace's frontmost application can briefly be a background
+    /// utility when a global hot key fires. The Accessibility focused app is
+    /// the application that actually owns keyboard focus, so prefer it when
+    /// available and fall back to NSWorkspace only when AX cannot resolve it.
+    private func focusedOrFrontmostApplication() -> NSRunningApplication? {
+        let systemWide = AXUIElementCreateSystemWide()
+        var focusedValue: CFTypeRef?
+        let status = AXUIElementCopyAttributeValue(
+            systemWide,
+            kAXFocusedApplicationAttribute as CFString,
+            &focusedValue
+        )
+        if status == .success, let focusedValue {
+            let focusedElement = focusedValue as! AXUIElement
+            var pid: pid_t = 0
+            if AXUIElementGetPid(focusedElement, &pid) == .success,
+               let app = NSRunningApplication(processIdentifier: pid),
+               !app.isTerminated {
+                return app
+            }
+        }
+        return NSWorkspace.shared.frontmostApplication
+    }
+
     func refreshAvailableApps() {
         availableApps = NSWorkspace.shared.runningApplications
             .filter {
