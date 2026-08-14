@@ -18,9 +18,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var started = false
     private var overlayShownAt: ContinuousClock.Instant?
     private var pendingHideTask: Task<Void, Never>?
+    private let updateController = GitHubUpdateController()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         start()
+        updateController.scheduleAutomaticCheck()
     }
 
     func start() {
@@ -39,6 +41,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         pendingHideTask?.cancel()
         holdHotKey?.unregister()
+        updateController.cancel()
+    }
+
+    func checkForUpdates() {
+        updateController.checkManually()
     }
 
     private func configureOverlay() {

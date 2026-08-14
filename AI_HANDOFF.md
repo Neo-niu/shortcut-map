@@ -13,7 +13,7 @@
 
 ## 当前实现方式
 
-- 已完成 SwiftUI/AppKit MVP，产物为 `dist/快捷键地图.app`。
+- 已完成 SwiftUI/AppKit MVP，发布产物为 `dist/Shortcut-Map.app.zip`；签名在系统临时目录完成后直接压缩，不在 iCloud 项目目录长期保留 `.app`，避免 Finder 扩展属性破坏签名。
 - 通过 Accessibility API 读取最近使用的前台 App 菜单快捷键。
 - 支持虚拟键盘高亮、精确修饰键组合筛选、动作/组合键/菜单路径搜索和来源展示。
 - 使用 Swift Package 构建；当前机器没有完整 Xcode，构建脚本负责组装并本地签名 `.app`。
@@ -22,8 +22,13 @@
 - 浮层使用非激活 `NSPanel`、透明材质和浮动窗口层级，不切换当前 App 焦点。
 - 浮层左侧展示三条重点引线（App 专属规则优先），右侧“完整目录”按修饰键分组列出全部已识别快捷键，不再截断。
 - App 专属目录已接入 ChatGPT（bundle ID `com.openai.codex`）：`⌃⇧M → 切换模型`。
+- 内置 GitHub 更新提醒：启动 8 秒后检查 `Neo-niu/shortcut-map` 最新正式 Release，成功检查后 24 小时内不重复；应用菜单提供“检查更新…”。新版弹窗支持查看下载、稍后提醒和跳过此版本，不自动覆盖应用。`GitHubReleaseTag` 用于兼容当前日期标签；后续发布应将 GitHub 标签与 App 版本统一。
 
 ## 验证结果
+
+- 2026-08-14：发布候选版本更新为 `0.1.1` build 2，正式标签统一为 `v0.1.1`。10 项测试、Release 构建、解压后严格签名、版本元数据和 `git diff --check` 通过；发布 ZIP 的 SHA-256 为 `4d4bbafb70bb6c0c3098b6613551cb72067fb19eee167233c6703e2bb0fca4dc`。
+
+- 2026-08-13：新增 GitHub Release 更新提醒和版本比较测试；兼容当前 `v2026.08.13` 日期标签，避免当前 `0.1.0` 安装误报更新。自动检查、手动菜单、跳过版本和 Release 下载跳转均已接线。10 项测试、Release 构建、版本元数据和解压后严格签名回读通过；构建脚本改为在系统临时目录签名后直接生成 ZIP，规避 iCloud Finder 扩展属性污染，未覆盖 `/Applications`。
 
 - 2026-08-13：发布准备验证 9 项测试、Release 构建和严格签名通过；README 增加 GitHub Release 安装、Gatekeeper 放行、辅助功能授权和更新后可能需重新授权的说明。
 - `swift test`：2 项测试通过，覆盖组合键顺序与键名标准化。

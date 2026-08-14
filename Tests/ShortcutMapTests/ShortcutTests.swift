@@ -83,4 +83,22 @@ struct ShortcutTests {
         #expect(AXShortcutReader.modifiers(rawValue: 1 << 3).isEmpty)
         #expect(AXShortcutReader.modifiers(rawValue: 0b1111) == [.shift, .option, .control])
     }
+
+    @Test func versionComparisonUsesNumericComponents() {
+        #expect(AppVersionComparator.isNewer("v0.1.1", than: "0.1.0"))
+        #expect(AppVersionComparator.isNewer("1.0.0", than: "0.9.99"))
+        #expect(!AppVersionComparator.isNewer("0.1.0", than: "0.1.0"))
+        #expect(!AppVersionComparator.isNewer("0.1.9", than: "0.1.10"))
+        #expect(!AppVersionComparator.isNewer("1.2.0", than: "1.2"))
+        #expect(!AppVersionComparator.isReleaseNewer(
+            tag: "v2026.08.13",
+            than: "0.1.0",
+            bundledReleaseTag: "v2026.08.13"
+        ))
+        #expect(AppVersionComparator.isReleaseNewer(
+            tag: "v2026.08.14",
+            than: "0.1.0",
+            bundledReleaseTag: "v2026.08.13"
+        ))
+    }
 }
