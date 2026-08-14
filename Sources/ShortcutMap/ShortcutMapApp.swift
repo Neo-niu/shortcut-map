@@ -13,6 +13,13 @@ struct ShortcutMapApp: App {
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1180, height: 760)
+        .commands {
+            CommandGroup(after: .appInfo) {
+                Button("检查更新…") {
+                    appDelegate.checkForUpdates()
+                }
+            }
+        }
 
         Settings {
             SettingsView()
